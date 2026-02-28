@@ -79,8 +79,6 @@ Best RMSE snapshot from that run:
 - seaborn
 - scikit-learn
 
-On Windows, use the Python.org installer (or `py` launcher) if your default `python`
-command points to MSYS2 and causes pip/SSL issues.
 
 ## Getting Started
 
