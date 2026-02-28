@@ -168,7 +168,7 @@ y_pred_wmmlr = wmmlr.predict(X_test)
 
 Random seeds are fixed in key components (default `random_state=42`) for stable clustering and model behavior.
 
-## Next Work Items
+## New Target 
 
 - Improve WMMLR weighting so it is competitive with MMLR across all datasets.
-- Convert script-style checks in `tests/` into assertion-based unit tests.
+- 
