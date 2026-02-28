@@ -1,0 +1,5 @@
+﻿venv/
+.venv310/
+__pycache__/
+*.pyc
+results_run_*/
