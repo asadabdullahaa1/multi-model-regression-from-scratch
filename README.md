@@ -72,36 +72,50 @@ Best RMSE snapshot from that run:
 
 ## Requirements
 
-- Python 3.10+ recommended on Windows
+- Python 3.10+
 - numpy
 - pandas
 - matplotlib
 - seaborn
 - scikit-learn
 
-## Quick Start (Windows PowerShell)
+On Windows, use the Python.org installer (or `py` launcher) if your default `python`
+command points to MSYS2 and causes pip/SSL issues.
 
-Use Windows CPython via `py` launcher (recommended), then create a local venv:
+## Getting Started
+
+Clone the repository and run the full experiment pipeline.
 
 ```powershell
-cd E:\Projects\mmlr
+git clone https://github.com/asadabdullahaa1/multi-model-regression-from-scratch.git
+cd multi-model-regression-from-scratch
+```
 
-py -3.10 -m venv .venv310
-.\.venv310\Scripts\Activate.ps1
+Create a virtual environment and install dependencies.
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
 
 python -m pip install --upgrade pip
 python -m pip install numpy pandas matplotlib seaborn scikit-learn
+```
 
+Run the full experiment:
+
+```powershell
 python main.py
 ```
 
-This creates a folder like:
+## What This Produces
+
+Each run creates a timestamped directory:
 
 ```text
 results_run_YYYY-MM-DD_HH-MM-SS/
 ```
 
-Inside each dataset folder:
+Inside each dataset folder, you will find:
 - `summary_across_k.csv`
 - `cluster_analysis_k*.csv`
 - `clusters_k*.png`
@@ -112,9 +126,9 @@ Inside each dataset folder:
 - `rmse_compare_k*.png`
 - `performance_vs_k.png`
 
-## Running Individual Checks
+## Running Component Checks
 
-These scripts are lightweight sanity checks:
+Use these scripts to verify each part of the project:
 
 ```powershell
 python tests/test1_data_loading.py
@@ -125,13 +139,30 @@ python tests/test5_mmlr.py
 python tests/test6_wmmlr.py
 ```
 
-## Notes on Warnings
+## Using the Models in Your Own Code
 
-During long runs, you may see warnings like:
-- `FigureCanvasAgg is non-interactive`
-- `More than 20 figures have been opened`
+You can import the models directly and run them on your own arrays:
 
-These do not stop execution. The project saves figures to disk and completes normally.
+```python
+from models.mmlr_model import MMLR
+from models.wmmlr_model import WMMLR
+
+# X_train, y_train, X_val, y_val, X_test should be numpy arrays
+mmlr = MMLR(k=5, lambda_reg=0.01, random_state=42)
+mmlr.fit(X_train, y_train)
+y_pred_mmlr = mmlr.predict(X_test)
+
+wmmlr = WMMLR(k=5, lambda_reg=0.01, random_state=42)
+wmmlr.fit(X_train, y_train, X_val, y_val)
+y_pred_wmmlr = wmmlr.predict(X_test)
+```
+
+## Notes
+
+- During long runs, matplotlib may print warnings such as:
+  - `FigureCanvasAgg is non-interactive`
+  - `More than 20 figures have been opened`
+- These warnings do not stop execution. Plots are still saved to disk.
 
 ## Reproducibility
 
@@ -139,4 +170,5 @@ Random seeds are fixed in key components (default `random_state=42`) for stable 
 
 ## Next Work Items
 
--  WMMLR weighting strategy need to be revised since its not competing the results with mmlr.
+- Improve WMMLR weighting so it is competitive with MMLR across all datasets.
+- Convert script-style checks in `tests/` into assertion-based unit tests.
