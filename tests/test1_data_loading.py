@@ -1,16 +1,33 @@
-import sys, os
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+import numpy as np
 
-from utils.data_loader import load_energy, load_bike, load_airquality
+from utils.data_loader import load_airquality, load_bike, load_energy
 
-print("Testing Energy dataset...")
-X, y = load_energy()
-print(X.shape, y.shape)
 
-print("\nTesting Bike dataset...")
-X2, y2 = load_bike()
-print(X2.shape, y2.shape)
+def test_load_energy_returns_clean_scaled_arrays():
+    X, y = load_energy()
 
-print("\nTesting Air Quality dataset...")
-X3, y3 = load_airquality()
-print(X3.shape, y3.shape)
+    assert X.shape == (768, 8)
+    assert y.shape == (768,)
+    assert np.isfinite(X).all()
+    assert np.isfinite(y).all()
+    assert np.allclose(X.mean(axis=0), 0.0, atol=1e-7)
+
+
+def test_load_bike_removes_leakage_columns_and_scales_features():
+    X, y = load_bike()
+
+    assert X.shape == (17379, 12)
+    assert y.shape == (17379,)
+    assert np.isfinite(X).all()
+    assert np.isfinite(y).all()
+    assert np.allclose(X.mean(axis=0), 0.0, atol=1e-7)
+
+
+def test_load_airquality_imputes_missing_values_and_scales_features():
+    X, y = load_airquality()
+
+    assert X.shape == (9357, 12)
+    assert y.shape == (9357,)
+    assert np.isfinite(X).all()
+    assert np.isfinite(y).all()
+    assert np.allclose(X.mean(axis=0), 0.0, atol=1e-7)

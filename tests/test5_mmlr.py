@@ -1,29 +1,27 @@
-import sys, os
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from utils.data_loader import load_energy
-from utils.preprocessing import train_val_test_split
-from models.mmlr_model import MMLR
-from utils.metrics import rmse, mae, r2_score
 import numpy as np
 
-print("Loading Energy dataset...")
-X, y = load_energy()
+from models.mmlr_model import MMLR
+from utils.metrics import rmse
 
-print("Splitting...")
-X_train, y_train, X_val, y_val, X_test, y_test = train_val_test_split(X, y)
 
-print("\nTraining MMLR with k=3...")
-mmlr = MMLR(k=3)
-mmlr.fit(X_train, y_train)
+def test_mmlr_trains_local_models_and_predicts_finite_values():
+    rng = np.random.default_rng(42)
+    X_left = rng.normal(loc=-2.0, scale=0.2, size=(30, 2))
+    X_right = rng.normal(loc=2.0, scale=0.2, size=(30, 2))
+    X = np.vstack([X_left, X_right])
+    y = np.concatenate(
+        [
+            1.5 * X_left[:, 0] - 0.5 * X_left[:, 1],
+            -2.0 * X_right[:, 0] + 0.25 * X_right[:, 1],
+        ]
+    )
 
-print("\nPredicting on test set...")
-pred = mmlr.predict(X_test)
+    model = MMLR(k=2, lambda_reg=0.01, random_state=42)
+    model.fit(X, y)
+    pred = model.predict(X)
 
-print("\nMMLR Results:")
-print("  RMSE:", rmse(y_test, pred))
-print("  MAE:", mae(y_test, pred))
-print("  R2:", r2_score(y_test, pred))
-
-print("\nCluster sizes:", mmlr.cluster_info)
-
+    assert len(model.local_models) == 2
+    assert set(model.cluster_info.keys()) == {0, 1}
+    assert pred.shape == y.shape
+    assert np.isfinite(pred).all()
+    assert rmse(y, pred) < 0.2

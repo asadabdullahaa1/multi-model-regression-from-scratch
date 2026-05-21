@@ -1,44 +1,27 @@
-import sys, os
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+import numpy as np
+import pytest
 
-from utils.data_loader import load_energy, load_bike, load_airquality
-from utils.preprocessing import train_val_test_split
 from models.linear_regression import LinearRegressionScratch
-from utils.metrics import rmse, mae, r2_score
+from utils.metrics import mae, r2_score, rmse
 
 
-def run_linear_regression(dataset_name, loader_fn, lambda_reg=0.01):
-    print("\n" + "="*80)
-    print(f"DATASET: {dataset_name.upper()}")
-    print("="*80)
+def test_linear_regression_fits_simple_linear_relationship():
+    X = np.arange(20, dtype=float).reshape(-1, 1)
+    y = 2.0 * X.ravel() + 3.0
 
-    # Load dataset
-    X, y = loader_fn()
+    model = LinearRegressionScratch(lambda_reg=0.0)
+    model.fit(X, y)
+    pred = model.predict(X)
 
-    # Split
-    X_train, y_train, X_val, y_val, X_test, y_test = train_val_test_split(X, y)
-
-    # Create model
-    model = LinearRegressionScratch(lambda_reg=lambda_reg)
-    model.fit(X_train, y_train)
-
-    # Predict
-    pred = model.predict(X_test)
-
-    # Print metrics
-    print(f"\n--- Results ({dataset_name}) ---")
-    print(f"RMSE: {rmse(y_test, pred):.6f}")
-    print(f"MAE : {mae(y_test, pred):.6f}")
-    print(f"R2  : {r2_score(y_test, pred):.6f}")
+    assert np.allclose(pred, y, atol=1e-8)
+    assert model.weights == pytest.approx([3.0, 2.0], abs=1e-8)
+    assert rmse(y, pred) < 1e-8
+    assert mae(y, pred) < 1e-8
+    assert r2_score(y, pred) == pytest.approx(1.0)
 
 
-if __name__ == "__main__":
-    # ENERGY
-    run_linear_regression("energy", load_energy, lambda_reg=0.01)
+def test_linear_regression_predict_requires_fit():
+    model = LinearRegressionScratch()
 
-    # BIKE
-    run_linear_regression("bike", load_bike, lambda_reg=0.01)
-
-    # AIR QUALITY (slightly higher regularization recommended)
-    run_linear_regression("airquality", load_airquality, lambda_reg=0.1)
-
+    with pytest.raises(ValueError, match="not been fitted"):
+        model.predict(np.zeros((2, 1)))

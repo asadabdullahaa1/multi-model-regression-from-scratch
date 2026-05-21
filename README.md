@@ -1,14 +1,35 @@
 ﻿# MMLR / WMMLR From Scratch
 
-Implementation of three regression approaches in pure Python/Numpy:
+NumPy implementation of Multi-Model Linear Regression (MMLR) and Weighted MMLR (WMMLR), based on the 2023 arXiv paper *An Efficient Data Analysis Method for Big Data Using Multiple-Model Linear Regression*.
+
+This project compares three regression approaches in pure Python/NumPy:
 - Single Linear Regression (Ridge)
 - MMLR (Multi-Model Linear Regression)
 - WMMLR (Weighted Multi-Model Linear Regression)
 
-The project trains and compares these models on three real datasets:
-- Energy Efficiency (`data/ENB2012_data.csv`)
-- Bike Sharing (`data/hour.csv`)
-- Air Quality (`data/AirQualityUCI.csv`)
+The models are evaluated on three public benchmark-style datasets:
+- Energy Efficiency (`768` rows, `8` features)
+- Bike Sharing (`17,379` rows, `12` features after leakage columns are removed)
+- Air Quality (`9,357` rows, `12` features)
+
+## Key Results
+
+In the latest saved run, MMLR improved RMSE over a single global ridge regressor on all three datasets. WMMLR was less reliable in this configuration: it beat Single LR on Bike for some `k` values, but underperformed MMLR across all datasets.
+
+| Dataset | Single LR | Best MMLR | RMSE Change vs Single LR | Best WMMLR |
+|---|---:|---:|---:|---:|
+| Energy | 2.7894 | 1.6475 (k=5) | -40.9% | 4.8584 (k=7) |
+| Bike | 140.6294 | 132.2745 (k=7) | -5.9% | 136.3697 (k=7) |
+| AirQuality | 0.5711 | 0.5540 (k=7) | -3.0% | 0.6939 (k=7) |
+
+![Energy dataset performance across k](assets/energy_performance_vs_k.png)
+
+## Findings
+
+- Clustered local regression models can outperform one global linear model when the dataset contains different local patterns.
+- The largest gain was on Energy Efficiency, where MMLR reduced RMSE by about
+  `40.9%` compared with Single LR.
+- WMMLR's weighting strategy needs more calibration. The current reliability weighting did not consistently improve over hard cluster assignment.
 
 ## Reference Paper
 
@@ -19,19 +40,6 @@ This project is based on the following paper:
 - **Year:** 2023
 - **Source:** arXiv preprint, arXiv:2308.12691
 - **Link:** https://arxiv.org/abs/2308.12691
-
-## Observed behavior from the latest run:
-- MMLR consistently outperformed Single LR.
-- WMMLR underperformed MMLR across all three datasets in this configuration.
-- WMMLR beat Single LR only on Bike at some `k` values.
-
-Best RMSE snapshot from that run:
-
-| Dataset | Single LR | Best MMLR | Best WMMLR |
-|---|---:|---:|---:|
-| Energy | 2.7894 | 1.6475 (k=5) | 4.8584 (k=7) |
-| Bike | 140.6294 | 132.2745 (k=7) | 136.3697 (k=7) |
-| AirQuality | 0.5711 | 0.5540 (k=7) | 0.6939 (k=7) |
 
 ## What This Project Does
 
@@ -69,6 +77,10 @@ Best RMSE snapshot from that run:
   - `ENB2012_data.csv`
   - `hour.csv`
   - `AirQualityUCI.csv`
+- `assets/`
+  - `energy_performance_vs_k.png`
+- `requirements.txt`
+- `pytest.ini`
 
 ## Requirements
 
@@ -78,7 +90,7 @@ Best RMSE snapshot from that run:
 - matplotlib
 - seaborn
 - scikit-learn
-
+- pytest
 
 ## Getting Started
 
@@ -96,7 +108,7 @@ python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 
 python -m pip install --upgrade pip
-python -m pip install numpy pandas matplotlib seaborn scikit-learn
+python -m pip install -r requirements.txt
 ```
 
 Run the full experiment:
@@ -124,17 +136,12 @@ Inside each dataset folder, you will find:
 - `rmse_compare_k*.png`
 - `performance_vs_k.png`
 
-## Running Component Checks
+## Running Tests
 
-Use these scripts to verify each part of the project:
+Run the assertion-based test suite with:
 
 ```powershell
-python tests/test1_data_loading.py
-python tests/test2_split.py
-python tests/test3_linear_regression.py
-python tests/test4_kmeans.py
-python tests/test5_mmlr.py
-python tests/test6_wmmlr.py
+pytest
 ```
 
 ## Using the Models in Your Own Code
@@ -164,9 +171,9 @@ y_pred_wmmlr = wmmlr.predict(X_test)
 
 ## Reproducibility
 
-Random seeds are fixed in key components (default `random_state=42`) for stable clustering and model behavior.
+Random seeds are fixed in key components (default `random_state=42`) for stable
+clustering and model behavior.
 
-## New Target 
+## New Target
 
 - Improve WMMLR weighting so it is competitive with MMLR across all datasets.
-- 
