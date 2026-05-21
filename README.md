@@ -1,13 +1,7 @@
 ﻿# MMLR / WMMLR From Scratch
 
-NumPy implementation of Multi-Model Linear Regression (MMLR) and Weighted MMLR (WMMLR), based on the 2023 arXiv paper *An Efficient Data Analysis Method for Big Data Using Multiple-Model Linear Regression*.
+NumPy implementation of Multi-Model Linear Regression (MMLR) and Weighted MMLR (WMMLR), based on Lyu & Li (2023, [arXiv:2308.12691](https://arxiv.org/abs/2308.12691)). Both methods partition the input space with k-means and fit a local ridge regressor per cluster; WMMLR adds a soft-expert weighting on top. Models are benchmarked against a single global ridge regressor on three UCI datasets:
 
-This project compares three regression approaches in pure Python/NumPy:
-- Single Linear Regression (Ridge)
-- MMLR (Multi-Model Linear Regression)
-- WMMLR (Weighted Multi-Model Linear Regression)
-
-The models are evaluated on three public benchmark-style datasets:
 - Energy Efficiency (`768` rows, `8` features)
 - Bike Sharing (`17,379` rows, `12` features after leakage columns are removed)
 - Air Quality (`9,357` rows, `12` features)
@@ -26,84 +20,29 @@ In the latest saved run, MMLR improved RMSE over a single global ridge regressor
 
 ## Findings
 
-- Clustered local regression models can outperform one global linear model when the dataset contains different local patterns.
-- The largest gain was on Energy Efficiency, where MMLR reduced RMSE by about
-  `40.9%` compared with Single LR.
-- WMMLR's weighting strategy needs more calibration. The current reliability weighting did not consistently improve over hard cluster assignment.
-
-## Reference Paper
-
-This project is based on the following paper:
-
-- **Title:** An Efficient Data Analysis Method for Big Data Using Multiple-Model Linear Regression (MMLR)
-- **Authors:** Bohan Lyu, Jianzhong Li
-- **Year:** 2023
-- **Source:** arXiv preprint, arXiv:2308.12691
-- **Link:** https://arxiv.org/abs/2308.12691
-
-## What This Project Does
-
-- Loads and cleans each dataset
-- Standardizes features
-- Splits data into train/validation/test
-- Trains:
-  - one global ridge regressor
-  - clustered local regressors (MMLR)
-  - weighted soft-expert ensemble (WMMLR)
-- Evaluates with RMSE, MAE, R2, and additional metrics
-- Saves plots and CSV summaries in timestamped results folders
+- **Clustered local regression helps most when the response is piecewise linear.** The largest gain (~41%) is on Energy Efficiency, where heating/cooling load depends on building geometry in piecewise ways that a single global model averages over.
+- **Gains shrink on already-linear-ish problems.** Bike Sharing and Air Quality leave only a few percent of headroom for MMLR over a single ridge regressor.
+- **WMMLR's weighting needs more calibration.** Reliability scores derived from validation MSE per cluster become noisy on small validation slices and pull predictions toward weak local models. See [Future Work](#future-work).
 
 ## Project Structure
 
-- `main.py`
-- `models/`
-  - `linear_regression.py`
-  - `kmeans.py`
-  - `mmlr_model.py`
-  - `wmmlr_model.py`
-- `utils/`
-  - `data_loader.py`
-  - `preprocessing.py`
-  - `metrics.py`
-  - `visualizations.py`
-- `tests/`
-  - `test1_data_loading.py`
-  - `test2_split.py`
-  - `test3_linear_regression.py`
-  - `test4_kmeans.py`
-  - `test5_mmlr.py`
-  - `test6_wmmlr.py`
-- `data/`
-  - `ENB2012_data.csv`
-  - `hour.csv`
-  - `AirQualityUCI.csv`
-- `assets/`
-  - `energy_performance_vs_k.png`
-- `requirements.txt`
-- `pytest.ini`
+- `main.py` — full experiment runner (load → split → train → evaluate → plot)
+- `models/` — `linear_regression`, `kmeans`, `mmlr_model`, `wmmlr_model`
+- `utils/` — data loading, preprocessing, metrics, visualizations
+- `tests/` — pytest unit tests for each component
+- `data/` — three UCI datasets (`ENB2012_data.csv`, `hour.csv`, `AirQualityUCI.csv`)
+- `assets/` — plots embedded in this README
 
-## Requirements
+## Tech
 
-- Python 3.10+
-- numpy
-- pandas
-- matplotlib
-- seaborn
-- scikit-learn
-- pytest
+Python 3.10+, NumPy, pandas, scikit-learn (only `StandardScaler` and `PCA`), Matplotlib, seaborn, pytest. Dependencies are listed in `requirements.txt`.
 
 ## Getting Started
-
-Clone the repository and run the full experiment pipeline.
 
 ```powershell
 git clone https://github.com/asadabdullahaa1/multi-model-regression-from-scratch.git
 cd multi-model-regression-from-scratch
-```
 
-Create a virtual environment and install dependencies.
-
-```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 
@@ -117,63 +56,41 @@ Run the full experiment:
 python main.py
 ```
 
-## What This Produces
-
-Each run creates a timestamped directory:
-
-```text
-results_run_YYYY-MM-DD_HH-MM-SS/
-```
-
-Inside each dataset folder, you will find:
-- `summary_across_k.csv`
-- `cluster_analysis_k*.csv`
-- `clusters_k*.png`
-- `weights_k*.png`
-- `pred_single_k*.png`
-- `pred_mmlr_k*.png`
-- `pred_wmmlr_k*.png`
-- `rmse_compare_k*.png`
-- `performance_vs_k.png`
+Each run writes a timestamped `results_run_YYYY-MM-DD_HH-MM-SS/` directory with per-dataset CSV summaries and comparison plots (clusters, weights, predictions vs actual, RMSE comparisons, performance vs k).
 
 ## Running Tests
-
-Run the assertion-based test suite with:
 
 ```powershell
 pytest
 ```
 
-## Using the Models in Your Own Code
+The suite covers data loading invariants, split reproducibility, ridge closed-form correctness on synthetic linear data, k-means cluster recovery, and shape/finiteness checks on MMLR and WMMLR outputs.
 
-You can import the models directly and run them on your own arrays:
+## Using the Models on Your Own Data
 
 ```python
 from models.mmlr_model import MMLR
 from models.wmmlr_model import WMMLR
 
-# X_train, y_train, X_val, y_val, X_test should be numpy arrays
 mmlr = MMLR(k=5, lambda_reg=0.01, random_state=42)
 mmlr.fit(X_train, y_train)
-y_pred_mmlr = mmlr.predict(X_test)
+y_pred = mmlr.predict(X_test)
 
 wmmlr = WMMLR(k=5, lambda_reg=0.01, random_state=42)
 wmmlr.fit(X_train, y_train, X_val, y_val)
-y_pred_wmmlr = wmmlr.predict(X_test)
+y_pred = wmmlr.predict(X_test)
 ```
-
-## Notes
-
-- During long runs, matplotlib may print warnings such as:
-  - `FigureCanvasAgg is non-interactive`
-  - `More than 20 figures have been opened`
-- These warnings do not stop execution. Plots are still saved to disk.
 
 ## Reproducibility
 
-Random seeds are fixed in key components (default `random_state=42`) for stable
-clustering and model behavior.
+All stochastic components (k-means initialization, train/val/test shuffles) accept `random_state` / `seed`. Defaults are pinned to `42` so a clean run reproduces the table above.
 
-## New Target
+## Future Work
 
-- Improve WMMLR weighting so it is competitive with MMLR across all datasets.
+-  WMMLR weighting failure modes can be further invetigated by: validation-set size sensitivity, softmax temperature on reliability scores, and gating on cluster-membership probability instead of global reliability.
+- Add cross-validated hyperparameter selection for `lambda_reg` and `k`.
+- Extend benchmarks to higher-dimensional datasets to test how MMLR scales.
+
+## Reference
+
+Lyu, B., & Li, J. (2023). *An Efficient Data Analysis Method for Big Data Using Multiple-Model Linear Regression (MMLR)*. arXiv preprint [2308.12691](https://arxiv.org/abs/2308.12691).
